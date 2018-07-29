@@ -60,46 +60,46 @@ if __name__ == '__main__':
         lines = chunk.split("\n")
         props = dict(account_id=1)
         master_id = False
-    tran = Transaction(**props)
-    for line in lines:
-        if line[0] == "D":
-            props["date"] = get_date(line)
-        elif (line[0] == "T") or (line[0] == "$"):
-            props["amount"] = get_amount(line)
-        elif line[0] == "P":
-            props["payee"] = line[1:]
-        elif line[0] == "L":
-            (fld, val) = get_cat(line)
-            props[fld] = val
-        elif line[0] == "C":
-            pass
-            props["reconciled"] = "X"
-        elif (line[0] == "M") or (line[0] == "E"):
-            props["memo"] = line[1:]
-        elif line[0] == "S":
-            # This is the start of a split record
-            # Write previous record and initialize current record
-            tran = Transaction(**props)
-            sql_eng.add(tran)
-            if not master_id:
-                # This is first split record, write master and remember ID
-                sql_eng.flush()
-                sql_eng.refresh(tran)
-                props["master_id"] = tran.id
+        for line in lines:
+            if line[0] == "D":
+                props["date"] = get_date(line)
+            elif (line[0] == "T") or (line[0] == "$"):
+                props["amount"] = get_amount(line)
+            elif line[0] == "P":
+                props["payee"] = line[1:]
+            elif line[0] == "L":
                 (fld, val) = get_cat(line)
                 props[fld] = val
-        elif line[0] == "!":
-            if account_type:
-                logging.critical("Multiple Account type lines found: {l}".format(l=line))
-                sys.exit(1)
+            elif line[0] == "C":
+                pass
+                props["reconciled"] = "X"
+            elif (line[0] == "M") or (line[0] == "E"):
+                props["memo"] = line[1:]
+            elif line[0] == "S":
+                # This is the start of a split record
+                # Write previous record and initialize current record
+                tran = Transaction(**props)
+                sql_eng.add(tran)
+                if not master_id:
+                    # This is first split record, write master and remember ID
+                    sql_eng.flush()
+                    sql_eng.refresh(tran)
+                    props["master_id"] = tran.id
+                    (fld, val) = get_cat(line)
+                    props[fld] = val
+            elif line[0] == "!":
+                if account_type:
+                    logging.critical("Multiple Account type lines found: {l}".format(l=line))
+                    sys.exit(1)
+                else:
+                    account_type = True
             else:
-                account_type = True
-        else:
-            logging.critical("Unexpected QIF line found: {l}".format(l=line))
-            sys.exit(1)
-    sql_eng.add(tran)
-    lc = li.info_loop()
-    if (lc % 100) == 0:
-        sql_eng.commit()
+                logging.critical("Unexpected QIF line found: {l}".format(l=line))
+                sys.exit(1)
+        tran = Transaction(**props)
+        sql_eng.add(tran)
+        lc = li.info_loop()
+        if (lc % 100) == 0:
+            sql_eng.commit()
     li.end_loop()
     sql_eng.commit()
