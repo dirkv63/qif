@@ -1,0 +1,13 @@
+############
+# Git Ignore
+############
+*.swp
+*.zip
+*.dot
+*.dot-input
+*.gif
+.idea/
+__pycache__/
+data/*
+properties/*.ini
+.ipynb_checkpoints/*
