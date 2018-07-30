@@ -19,7 +19,10 @@ def get_amount(item):
 
     :return:
     """
-    amount = item[1:].replace(",", "")
+    if len(item) == 1:
+        amount = "0"
+    else:
+        amount = item[1:].replace(",", "")
     return float(amount)
 
 
