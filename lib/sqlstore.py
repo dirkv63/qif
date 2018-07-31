@@ -37,6 +37,7 @@ class Account(Base):
     number = Column(Text)
     type = Column(Text, nullable=False)
     code = Column(Text, nullable=False, unique=True)
+    balance = Column(Float)
     bank = relationship("Bank", foreign_keys=[bank_id], backref="account")
 
 

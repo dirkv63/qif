@@ -43,9 +43,9 @@ def get_date(item):
         return "20{yr}-{m:02d}-{d:02d}".format(yr=yr, m=int(m), d=int(d))
 
 def get_cat(item):
-    if item[1] == "[":
+    try:
         return "transfer_id", accounts[item[2:-1]]
-    else:
+    except KeyError:
         return "category", item[1:]
 
 if __name__ == '__main__':
@@ -62,10 +62,6 @@ if __name__ == '__main__':
 
     # Get Account names and ids for reference in transactions
     accounts = {}
-    account_recs = sql_eng.query(Account).all()
-    for rec in account_recs:
-        accounts[rec.name] = rec.id
-
     # Get account
     fn = args.filename
     fh = open(fn, "r")
@@ -80,6 +76,12 @@ if __name__ == '__main__':
         logging.critical("No lines for Account code {code}".format(code=code))
         sys.exit(1)
     account_id = account_rec.id
+    account_type = account_rec.type
+    if account_type == "effect":
+        # Effect account statements are not in bank account statements!
+        account_recs = sql_eng.query(Account).all()
+        for rec in account_recs:
+            accounts[rec.name] = rec.id
     trans = sql_eng.query(Transaction).filter_by(account_id=account_id)
     trans.delete()
     sql_eng.commit()

@@ -50,6 +50,11 @@ if __name__ == '__main__':
         row["balance"] = balance
         res.append(row)
 
+    # Update balance in account table
+    account_rec.balance = balance
+    sql_eng.commit()
+
+    # Then write Report
     xl = write2excel.Write2Excel()
     xl.init_sheet(code)
     xl.write_content(res)
