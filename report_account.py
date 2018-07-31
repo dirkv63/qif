@@ -7,12 +7,7 @@ from lib import my_env
 from lib import sqlstore
 from lib.sqlstore import *
 from lib import write2excel
-from sqlalchemy import inspect
 from sqlalchemy.orm.exc import *
-
-def object_as_dict(obj):
-    return {c.key: getattr(obj, c.key)
-            for c in inspect(obj).mapper.column_attrs}
 
 if __name__ == '__main__':
     # Configure command line arguments
@@ -26,7 +21,7 @@ if __name__ == '__main__':
     logging.info("Arguments: {a}".format(a=args))
     sql_eng = sqlstore.init_session(cfg["Main"]["db"])
 
-    tranfields = ["id", "master_id", "date", "payee", "category", "memo", "reconciled", "amount"]
+    tranfields = ["id", "master_id", "date", "payee", "category", "memo", "action", "name", "reconciled", "amount"]
     balance = 0
     res = []
     # Find Account ID
@@ -39,8 +34,11 @@ if __name__ == '__main__':
     except NoResultFound:
         logging.critical("No lines for Account code {code}".format(code=code))
         sys.exit(1)
+
     account_id = account_rec.id
-    trans = sql_eng.query(Transaction).filter_by(account_id=account_id).order_by(Transaction.id).all()
+    trans = sql_eng.query(Transaction).filter((Transaction.account_id == account_id) |
+                                              (Transaction.transfer_id == account_id)).order_by(Transaction.date,
+                                                                                                Transaction.id).all()
     for tran_rec in trans:
         tran = object_as_dict(tran_rec)
         # Add balance for every account that is not split account

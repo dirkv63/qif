@@ -5,10 +5,14 @@ This module consolidates Database access for this project.
 import logging
 import os
 import sqlite3
-from sqlalchemy import Column, Integer, Text, create_engine, ForeignKey, Float
+from sqlalchemy import Column, Integer, Text, create_engine, ForeignKey, Float, inspect
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
+# Action add means it will add the amount to the account in transfer
+action_add = ["ShrsOut", "Div", "DivX", "XOut", "SellX", "Sell"]
+# Action sub means it will subtract the amount from the account in transfer
+action_sub = ["ShrsIn", "BuyX", "Buy"]
 
 Base = declarative_base()
 
@@ -32,7 +36,7 @@ class Account(Base):
     name = Column(Text, nullable=False)
     number = Column(Text)
     type = Column(Text, nullable=False)
-    code = Column(Text)
+    code = Column(Text, nullable=False, unique=True)
     bank = relationship("Bank", foreign_keys=[bank_id], backref="account")
 
 
@@ -130,3 +134,7 @@ def set_session4engine(engine):
     session_class = sessionmaker(bind=engine)
     session = session_class()
     return session
+
+def object_as_dict(obj):
+    return {c.key: getattr(obj, c.key)
+            for c in inspect(obj).mapper.column_attrs}

@@ -43,7 +43,10 @@ def get_date(item):
         return "20{yr}-{m:02d}-{d:02d}".format(yr=yr, m=int(m), d=int(d))
 
 def get_cat(item):
-    return "category", item[1:]
+    if item[1] == "[":
+        return "transfer_id", accounts[item[2:-1]]
+    else:
+        return "category", item[1:]
 
 if __name__ == '__main__':
     # Configure command line arguments
@@ -56,6 +59,12 @@ if __name__ == '__main__':
     cfg = my_env.init_env("qif", __file__)
     logging.info("Arguments: {a}".format(a=args))
     sql_eng = sqlstore.init_session(cfg["Main"]["db"])
+
+    # Get Account names and ids for reference in transactions
+    accounts = {}
+    account_recs = sql_eng.query(Account).all()
+    for rec in account_recs:
+        accounts[rec.name] = rec.id
 
     # Get account
     fn = args.filename
@@ -103,6 +112,9 @@ if __name__ == '__main__':
                 props["memo"] = line[1:]
             elif line[0] == "N":
                 props["action"] = line[1:]
+                # Action for effect only -  make amount negative if required
+                if props["action"] in action_sub:
+                    props["amount"] *= -1
             elif line[0] == "Y":
                 props["name"] = line[1:]
             elif line[0] == "I":
