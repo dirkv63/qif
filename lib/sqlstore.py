@@ -66,6 +66,28 @@ class Transaction(Base):
     transfer = relationship("Account", foreign_keys=[transfer_id], backref="transfer")
 
 
+class Gnutx(Base):
+    """
+    Transaction information for GnuCash Load.
+    """
+    __tablename__ = "gnutrans"
+    id = Column(Integer, primary_key=True)
+    account_id = Column(Integer)
+    action = Column(Text)
+    amount = Column(Float, nullable=False)
+    category = Column(Text)
+    commission = Column(Float)
+    date = Column(Text)
+    master_id = Column(Integer, ForeignKey("gnutrans.id"))
+    memo = Column(Text)
+    name = Column(Text)
+    payee = Column(Text)
+    price = Column(Float)
+    quantity = Column(Float)
+    reconciled = Column(Text)
+    transfer_id = Column(Integer, ForeignKey("accounts.id"))
+
+
 class DirectConn:
     """
     This class will set up a direct connection to the database. It allows to reset the database,
