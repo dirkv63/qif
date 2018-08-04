@@ -2,12 +2,9 @@
 This script will prepare the GNU transaction table by removing double entries from the transactions table.
 """
 
-import argparse
-import sys
 from lib import my_env
 from lib import sqlstore
 from lib.sqlstore import *
-from sqlalchemy.orm.exc import *
 
 
 if __name__ == '__main__':
@@ -32,29 +29,22 @@ if __name__ == '__main__':
                 gnutx = Gnutx(**recdic)
                 sql_eng.add(gnutx)
             else:
-                # Check if this is duplicate transaction
+                # Check if this is a transfer transaction: category is known account
                 try:
-                    dup_account = accounts[recdic["category"]]
-                except KeyError:
+                    tx_account = recdic["category"][1:-1]
+                    dup_account = accounts[tx_account]
+                except (KeyError, TypeError) as e:
                     # Category is not an account, so load the record
                     gnutx = Gnutx(**recdic)
                     sql_eng.add(gnutx)
                 else:
-                    # Category is an account - check if record exist already
-                    try:
-                        dup_rec = sql_eng.query(Gnutx).filter_by(account_id=dup_account.id, amount=recdic["amount"]*(-1),
-                                                                 date=recdic["date"],
-                                                                 category=cat_account_name)
-                        """
-                        print("Query: {q}".format(q=str(dup_rec)))
-                        print("account_id: {aid} - amount: {am} - date: {dt} - cat: [{cat}]".format(aid=dup_account.id,
-                                                                                                  am=recdic["amount"]*(-1),
-                                                                                                  dt=recdic["date"],
-                                                                                                  cat=cat_account_name))
-                        sys.exit()
-                        """
-                    except NoResultFound:
-                        # Duplicate record not stored, do it now.
+                    # Category is an account - check if transaction has been loaded from other account.
+                    # More than one record can exist, e.g. for more than 1 bancontact transaction on same day.
+                    dup_rec = sql_eng.query(Gnutx).filter_by(account_id=dup_account.id, amount=recdic["amount"]*(-1),
+                                                             date=recdic["date"],
+                                                             category=cat_account_name).first()
+                    if not dup_rec:
+                        # Duplicate record not stored, so store this transaction now.
                         gnutx = Gnutx(**recdic)
                         sql_eng.add(gnutx)
         sql_eng.commit()
