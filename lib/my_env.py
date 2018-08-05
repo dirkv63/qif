@@ -14,6 +14,21 @@ import subprocess
 from collections import namedtuple
 from datetime import datetime
 
+# amount T or $, try if T is accepted for all!
+tx2qif = dict(
+    date="D",
+    reconciled="C",
+    memo="M",
+    amount="T",
+    payee="P",
+    category="L",
+    action="N",
+    name="Y",
+    price="I",
+    quantity="Q"
+)
+
+
 def init_env(projectname, filename):
     """
     This function will initialize the environment: Find and return handle to config file and set-up logging.

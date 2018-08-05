@@ -71,91 +71,23 @@ if __name__ == '__main__':
         sys.exit(1)
     account_id = account_rec.id
     account_type = account_rec.type
+    account_qif = account_rec.qiftype
 
     # Get outfile
     loaddir = cfg["Main"]["loaddir"]
-    fn = sys.path.join(loaddir, "{code}.qif".format(code=code))
+    fn = os.path.join(loaddir, "{code}.qif".format(code=code))
     fh = open(fn, "w")
-
-    # Get Account names and ids for reference in transactions
-    accounts = {}
-    code, ext = basename.split(".")
-    if account_type == "effect":
-        # Effect account statements are not in bank account statements!
-        account_recs = sql_eng.query(Account).all()
-        for rec in account_recs:
-            accounts[rec.name] = rec.id
+    # Write type
+    fh.write("!Type:{qif}\n".format(qif=account_qif))
 
     # Get all GnuCash transaction records for this account
-    trans = sql_eng.query(Gnutx).filter_by(account_id=account_id)
-
-
-    # sys.exit("Successful execution")
-    qifdump = fh.read()
-    chunks = qifdump.split("\n^\n")
-    account_type = False
-    li = my_env.LoopInfo("Transactions", 100)
-    for chunk in chunks:
-        if len(chunk) == 0:
-            break
-        lines = chunk.split("\n")
-        props = dict(account_id=account_id)
-        master_id = False
-        for line in lines:
-            if line[0] == "D":
-                props["date"] = get_date(line)
-            elif (line[0] == "T") or (line[0] == "$"):
-                props["amount"] = get_amount(line)
-            elif line[0] == "P":
-                props["payee"] = line[1:]
-            elif line[0] == "L":
-                (fld, val) = get_cat(line)
-                props[fld] = val
-                master_id = False
-            elif line[0] == "C":
-                pass
-                props["reconciled"] = "X"
-            elif (line[0] == "M") or (line[0] == "E"):
-                props["memo"] = line[1:]
-            elif line[0] == "N":
-                props["action"] = line[1:]
-                # Action for effect only -  make amount negative if required
-                if props["action"] in action_sub:
-                    props["amount"] *= -1
-            elif line[0] == "Y":
-                props["name"] = line[1:]
-            elif line[0] == "I":
-                props["price"] = get_amount(line)
-            elif line[0] == "Q":
-                props["quantity"] = get_amount(line)
-            elif line[0] == "O":
-                props["commission"] = get_amount(line)
-            elif line[0] == "S":
-                # This is the start of a split record
-                # Write previous record and initialize current record
-                tran = Transaction(**props)
-                sql_eng.add(tran)
-                if not master_id:
-                    # This is first split record, write master and remember ID
-                    sql_eng.flush()
-                    sql_eng.refresh(tran)
-                    master_id = tran.id
-                    props["master_id"] = master_id
-                    (fld, val) = get_cat(line)
-                    props[fld] = val
-            elif line[0] == "!":
-                if account_type:
-                    logging.critical("Multiple Account type lines found: {l}".format(l=line))
-                    sys.exit(1)
-                else:
-                    account_type = True
-            else:
-                logging.critical("Unexpected QIF line found: {l}".format(l=line))
-                sys.exit(1)
-        tran = Transaction(**props)
-        sql_eng.add(tran)
-        lc = li.info_loop()
-        if (lc % 100) == 0:
-            sql_eng.commit()
-    li.end_loop()
-    sql_eng.commit()
+    tx2qif = my_env.tx2qif
+    trans = sql_eng.query(Gnutx).filter_by(account_id=account_id).all()
+    for rec in trans:
+        trans_dict = object_as_dict(rec)
+        for fld in tx2qif:
+            if trans_dict[fld]:
+                line = "{qifid}{val}\n".format(qifid=tx2qif[fld], val=trans_dict[fld])
+                fh.write(line)
+        fh.write("^\n")
+    fh.close()
