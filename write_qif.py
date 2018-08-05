@@ -1,6 +1,5 @@
 """
-This script will process a qif file. The filename defines the account. The filename needs to be available in the code
-field from the account table.
+This script will write a qif file for loading into GnuCash. The filename defines the account.
 """
 
 import argparse
@@ -51,22 +50,17 @@ def get_cat(item):
 if __name__ == '__main__':
     # Configure command line arguments
     parser = argparse.ArgumentParser(
-        description="Load QIF file into database"
+        description="Write QIF file"
     )
-    parser.add_argument('-f', '--filename', type=str, required=True,
-                        help='Please provide the qif file to load.')
+    parser.add_argument('-c', '--code', type=str, required=True,
+                        help='Please provide the account code.')
     args = parser.parse_args()
     cfg = my_env.init_env("qif", __file__)
     logging.info("Arguments: {a}".format(a=args))
     sql_eng = sqlstore.init_session(cfg["Main"]["db"])
 
-    # Get Account names and ids for reference in transactions
-    accounts = {}
-    # Get account
-    fn = args.filename
-    fh = open(fn, "r")
-    basename = os.path.basename(fn)
-    code, ext = basename.split(".")
+    # Get account information
+    code = args.code
     try:
         account_rec = sql_eng.query(Account).filter_by(code=code).one()
     except MultipleResultsFound:
@@ -77,14 +71,25 @@ if __name__ == '__main__':
         sys.exit(1)
     account_id = account_rec.id
     account_type = account_rec.type
+
+    # Get outfile
+    loaddir = cfg["Main"]["loaddir"]
+    fn = sys.path.join(loaddir, "{code}.qif".format(code=code))
+    fh = open(fn, "w")
+
+    # Get Account names and ids for reference in transactions
+    accounts = {}
+    code, ext = basename.split(".")
     if account_type == "effect":
         # Effect account statements are not in bank account statements!
         account_recs = sql_eng.query(Account).all()
         for rec in account_recs:
             accounts[rec.name] = rec.id
-    trans = sql_eng.query(Transaction).filter_by(account_id=account_id)
-    trans.delete()
-    sql_eng.commit()
+
+    # Get all GnuCash transaction records for this account
+    trans = sql_eng.query(Gnutx).filter_by(account_id=account_id)
+
+
     # sys.exit("Successful execution")
     qifdump = fh.read()
     chunks = qifdump.split("\n^\n")
@@ -95,14 +100,9 @@ if __name__ == '__main__':
             break
         lines = chunk.split("\n")
         props = dict(account_id=account_id)
-        # Master ID is used for Split accounts
         master_id = False
         for line in lines:
-            if line[:len("!Type")] == "!Type":
-                # Add type to account table for this account
-                account_rec.qiftype = line[len("!Type")+1:]
-                sql_eng.commit()
-            elif line[0] == "D":
+            if line[0] == "D":
                 props["date"] = get_date(line)
             elif (line[0] == "T") or (line[0] == "$"):
                 props["amount"] = get_amount(line)
