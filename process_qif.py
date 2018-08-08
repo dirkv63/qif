@@ -140,9 +140,9 @@ if __name__ == '__main__':
                     sql_eng.flush()
                     sql_eng.refresh(tran)
                     master_id = tran.id
-                    props["master_id"] = master_id
-                    (fld, val) = get_cat(line)
-                    props[fld] = val
+                props["master_id"] = master_id
+                (fld, val) = get_cat(line)
+                props[fld] = val
             elif line[0] == "!":
                 if account_type:
                     logging.critical("Multiple Account type lines found: {l}".format(l=line))

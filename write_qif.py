@@ -62,6 +62,7 @@ if __name__ == '__main__':
     logging.info("Arguments: {a}".format(a=args))
     sql_eng = sqlstore.init_session(cfg["Main"]["db"])
     tx2qif = my_env.tx2qif
+    split2qif = my_env.split2qif
 
     # Get account information
     code = args.code
@@ -99,21 +100,22 @@ if __name__ == '__main__':
     for rec in trans:
         trans_dict = object_as_dict(rec)
         if trans_dict["master_id"]:
-            tx2qif["category"] = "S"
-            tx2qif["memo"] = "E"
+            # Get Category, memo and amount
+            for fld in split2qif:
+                if trans_dict[fld]:
+                    line = "{qifid}{val}\n".format(qifid=split2qif[fld], val=trans_dict[fld])
+                    fh.write(line)
         else:
-            tx2qif["category"] = "L"
-            tx2qif["memo"] = "M"
             if first_tx:
                 first_tx = False
             else:
                 fh.write("^\n")
-        for fld in tx2qif:
-            if trans_dict[fld]:
-                if fld == "transfer_id":
-                    line = "L[{val}]\n".format(val=accounts[str(trans_dict[fld])])
-                else:
-                    line = "{qifid}{val}\n".format(qifid=tx2qif[fld], val=trans_dict[fld])
-                fh.write(line)
+            for fld in tx2qif:
+                if trans_dict[fld]:
+                    if fld == "transfer_id":
+                        line = "L[{val}]\n".format(val=accounts[str(trans_dict[fld])])
+                    else:
+                        line = "{qifid}{val}\n".format(qifid=tx2qif[fld], val=trans_dict[fld])
+                    fh.write(line)
     fh.write("^\n")
     fh.close()

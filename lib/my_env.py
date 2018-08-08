@@ -27,6 +27,11 @@ tx2qif = dict(
     price="I",
     quantity="Q"
 )
+split2qif = dict(
+    category="S",
+    memo="E",
+    amount="$"
+)
 
 
 def init_env(projectname, filename):
