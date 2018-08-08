@@ -1,5 +1,8 @@
 """
 This script will write a qif file for loading into GnuCash. The filename defines the account.
+
+Issue list:
+- split account need to be added.
 """
 
 import argparse
@@ -58,6 +61,7 @@ if __name__ == '__main__':
     cfg = my_env.init_env("qif", __file__)
     logging.info("Arguments: {a}".format(a=args))
     sql_eng = sqlstore.init_session(cfg["Main"]["db"])
+    tx2qif = my_env.tx2qif
 
     # Get account information
     code = args.code
@@ -72,6 +76,13 @@ if __name__ == '__main__':
     account_id = account_rec.id
     account_type = account_rec.type
     account_qif = account_rec.qiftype
+    accounts = {}
+    if account_type == "effect":
+        tx2qif["amount"] = "$"
+        account_recs = sql_eng.query(Account).all()
+        for rec in account_recs:
+            accounts[str(rec.id)] = rec.name
+
 
     # Get outfile
     loaddir = cfg["Main"]["loaddir"]
@@ -81,13 +92,28 @@ if __name__ == '__main__':
     fh.write("!Type:{qif}\n".format(qif=account_qif))
 
     # Get all GnuCash transaction records for this account
-    tx2qif = my_env.tx2qif
     trans = sql_eng.query(Gnutx).filter_by(account_id=account_id).all()
+    # new_tx flag is used to understand difference with split transaction. Do not write block delimiter for split tx.
+    # First traansaction also is not a new transaction.
+    first_tx = True
     for rec in trans:
         trans_dict = object_as_dict(rec)
+        if trans_dict["master_id"]:
+            tx2qif["category"] = "S"
+            tx2qif["memo"] = "E"
+        else:
+            tx2qif["category"] = "L"
+            tx2qif["memo"] = "M"
+            if first_tx:
+                first_tx = False
+            else:
+                fh.write("^\n")
         for fld in tx2qif:
             if trans_dict[fld]:
-                line = "{qifid}{val}\n".format(qifid=tx2qif[fld], val=trans_dict[fld])
+                if fld == "transfer_id":
+                    line = "L[{val}]\n".format(val=accounts[str(trans_dict[fld])])
+                else:
+                    line = "{qifid}{val}\n".format(qifid=tx2qif[fld], val=trans_dict[fld])
                 fh.write(line)
-        fh.write("^\n")
+    fh.write("^\n")
     fh.close()
