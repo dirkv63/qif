@@ -14,9 +14,11 @@ if __name__ == '__main__':
 
     # Get Account names and ids for reference in transactions
     accounts = {}
+    acc_names = {}
     account_recs = sql_eng.query(Account).all()
     for rec in account_recs:
         accounts[rec.name] = rec
+        acc_names[str(rec.id)] = rec.name
 
     for account in account_recs:
         tx = sql_eng.query(Transaction).filter_by(account_id=account.id).all()
@@ -26,6 +28,9 @@ if __name__ == '__main__':
             li.info_loop()
             recdic = object_as_dict(rec)
             if account.type == "effect":
+                # Convert transfer_id back to account
+                if recdic["transfer_id"]:
+                    recdic["category"] = "[{a}]".format(a=acc_names[str(recdic["transfer_id"])])
                 gnutx = Gnutx(**recdic)
                 sql_eng.add(gnutx)
             else:
@@ -33,7 +38,12 @@ if __name__ == '__main__':
                 try:
                     tx_account = recdic["category"][1:-1]
                     dup_account = accounts[tx_account]
-                except (KeyError, TypeError) as e:
+                except TypeError:
+                    # Category not defined. Use payee.
+                    recdic["category"] = recdic["payee"]
+                    gnutx = Gnutx(**recdic)
+                    sql_eng.add(gnutx)
+                except KeyError:
                     # Category is not an account, so load the record
                     gnutx = Gnutx(**recdic)
                     sql_eng.add(gnutx)

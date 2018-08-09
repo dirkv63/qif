@@ -25,7 +25,8 @@ tx2qif = dict(
     action="N",
     name="Y",
     price="I",
-    quantity="Q"
+    quantity="Q",
+    commission="O"
 )
 split2qif = dict(
     category="S",

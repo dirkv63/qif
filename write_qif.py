@@ -77,6 +77,9 @@ if __name__ == '__main__':
     account_id = account_rec.id
     account_type = account_rec.type
     account_qif = account_rec.qiftype
+    if not account_qif:
+        logging.critical("No info for code {c}".format(c=code))
+        sys.exit(1)
     accounts = {}
     if account_type == "effect":
         tx2qif["amount"] = "$"
