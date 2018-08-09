@@ -26,12 +26,14 @@ tx2qif = dict(
     name="Y",
     price="I",
     quantity="Q",
-    commission="O"
+    commission="O",
+    split="$"
 )
 split2qif = dict(
     category="S",
+    amount="T",
     memo="E",
-    amount="$"
+    split="$"
 )
 
 

@@ -104,8 +104,10 @@ if __name__ == '__main__':
                 sql_eng.commit()
             elif line[0] == "D":
                 props["date"] = get_date(line)
-            elif (line[0] == "T") or (line[0] == "$"):
+            elif (line[0] == "T"):
                 props["amount"] = get_amount(line)
+            elif (line[0] == "$"):
+                props["split"] = get_amount(line)
             elif line[0] == "P":
                 props["payee"] = line[1:]
             elif line[0] == "L":

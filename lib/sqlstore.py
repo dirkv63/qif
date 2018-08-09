@@ -63,6 +63,7 @@ class Transaction(Base):
     price = Column(Float)
     quantity = Column(Float)
     reconciled = Column(Text)
+    split = Column(Float)
     transfer_id = Column(Integer, ForeignKey("accounts.id"))
     transfer = relationship("Account", foreign_keys=[transfer_id], backref="transfer")
 
@@ -86,6 +87,7 @@ class Gnutx(Base):
     price = Column(Float)
     quantity = Column(Float)
     reconciled = Column(Text)
+    split = Column(Float)
     transfer_id = Column(Integer, ForeignKey("accounts.id"))
 
 

@@ -82,7 +82,6 @@ if __name__ == '__main__':
         sys.exit(1)
     accounts = {}
     if account_type == "effect":
-        tx2qif["amount"] = "$"
         account_recs = sql_eng.query(Account).all()
         for rec in account_recs:
             accounts[str(rec.id)] = rec.name
@@ -102,6 +101,9 @@ if __name__ == '__main__':
     first_tx = True
     for rec in trans:
         trans_dict = object_as_dict(rec)
+        # Restore operation from process_qif
+        if trans_dict["action"] in action_sub:
+            trans_dict["amount"] *= -1
         if trans_dict["master_id"]:
             # Get Category, memo and amount
             for fld in split2qif:
